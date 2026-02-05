@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: memes_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-memes_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Opcional: si tienes un script .sql para crear las tablas al iniciar
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  api:
+    build: .
+    container_name: memes_api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    env_file:
+      - ./cmd/api/.env
+    environment:
+      # Sobrescribimos la URL de la DB para que apunte al contenedor 'db'
+      - DATABASE_URL=postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-memes_db}?sslmode=disable
+
+volumes:
+  postgres_data:
