@@ -3,17 +3,25 @@ package routes
 import (
 	"database/sql"
 
-	"estructura_base/internal/api/handlers"
-	"estructura_base/internal/users"
+	"api_memes/internal/api/handlers"
+	"api_memes/internal/memes"
+	"api_memes/internal/users"
 
 	"github.com/go-chi/chi/v5"
 )
 
 func RegisterRoutes(r chi.Router, db *sql.DB) {
-	userService := users.NewService(db)
-	userHandler := handlers.NewUserHandler(userService)
+    userService := users.NewService(db)
+    userHandler := handlers.NewUserHandler(userService)
+    memeService := memes.NewService(db)
+    memeHandler := handlers.NewMemeHandler(memeService)
 
-	r.Post("/users", userHandler.Create)
-	r.Get("/users", userHandler.GetAll)
-    r.Get("/users/{id}", userHandler.GetByID)
+    r.Post("/register", userHandler.Create)
+    r.Post("/login", userHandler.Login)
+    r.Get("/memes", memeHandler.GetAll)
+
+    r.Group(func(r chi.Router) {
+        r.Use(AuthMiddleware)
+        r.Post("/memes", memeHandler.Create)
+    })
 }

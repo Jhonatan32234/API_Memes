@@ -2,8 +2,9 @@ package users
 
 import (
 	"database/sql"
+	"fmt"
 
-	"estructura_base/internal/shared"
+	"api_memes/internal/shared"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -43,6 +44,21 @@ func (s *Service) Create(dto CreateUserDTO) (*User, error) {
 
 func (s *Service) GetAll() ([]User, error) {
 	return s.repo.FindAll()
+}
+
+
+func (s *Service) Login(email, password string) (*User, error) {
+    user, err := s.repo.FindByEmail(email)
+    if err != nil {
+        return nil, shared.ErrNotFound
+    }
+
+    err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+    if err != nil {
+        return nil, fmt.Errorf("invalid credentials")
+    }
+
+    return user, nil
 }
 
 func (s *Service) GetByID(id int64) (*User, error) {

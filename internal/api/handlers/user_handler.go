@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"api_memes/internal/shared"
+	"api_memes/internal/users"
 	"encoding/json"
-	"estructura_base/internal/shared"
-	"estructura_base/internal/users"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type UserHandler struct {
@@ -16,6 +19,34 @@ type UserHandler struct {
 
 func NewUserHandler(service *users.Service) *UserHandler {
 	return &UserHandler{service: service}
+}
+
+func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
+    var dto users.CreateUserDTO // Reutilizamos el DTO de Email/Password
+    if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+        http.Error(w, "invalid json", http.StatusBadRequest)
+        return
+    }
+
+    user, err := h.service.Login(dto.Email, dto.Password)
+    if err != nil {
+        http.Error(w, "unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    // Crear el Token
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+        "user_id": user.ID,
+        "exp":     time.Now().Add(time.Hour * 72).Unix(),
+    })
+
+    tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+    if err != nil {
+        http.Error(w, "error generating token", http.StatusInternalServerError)
+        return
+    }
+
+    json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
 
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
